@@ -7,15 +7,35 @@ from models import Profile, HeaderData
 
 from utils import fileUtils
 
+import logging.config
+
+ERROR_FORMAT = "%(levelname)s at %(asctime)s in %(funcName)s in %(filename) at line %(lineno)d: %(message)s"
+DEBUG_FORMAT = "%(lineno)d in %(filename)s at %(asctime)s: %(message)s"
+LOG_CONFIG = {'version': 1,
+              'formatters': {'error': {'format': ERROR_FORMAT},
+                             'debug': {'format': DEBUG_FORMAT}},
+              'handlers': {'console': {'class': 'logging.StreamHandler',
+                                       'formatter': 'debug',
+                                       'level': logging.DEBUG},
+                           'file': {'class': 'logging.FileHandler',
+                                    'filename': 'logs.log',
+                                    'formatter': 'error',
+                                    'level': logging.ERROR}},
+              'root': {'handlers': ('console', 'file'), 'level': 'DEBUG'}
+              }
+
+logging.config.dictConfig(LOG_CONFIG)
+
+
 class PhaverParser:
     def __init__(self):
         self.graphUrls = "https://gql.next.phaver.com/v1/graphql"
 
         self.header = self.__genHeader(HeaderData(
-            bearerToken="",
-            baggage="",
-            sentry="",
-            requestID=""
+            bearerToken="Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjZjYzNmY2I2NDAzMjc2MGVlYjljMjZmNzdkNDA3YTY5NGM1MmIwZTMiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoi0JTQsNC90LjQuyDQpdC-0LTQvtGBIiwiaHR0cHM6Ly9oYXN1cmEuaW8vand0L2NsYWltcyI6eyJ4LWhhc3VyYS1hbGxvd2VkLXJvbGVzIjpbInVzZXIiXSwieC1oYXN1cmEtZGVmYXVsdC1yb2xlIjoidXNlciIsIngtaGFzdXJhLXVzZXItaWQiOiJEUzJtUDhrUElhZkhudUZxRkpOd3VKbkZDd2syIn0sInR5cGUiOiJ1c2VyIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL3BoYXZlci1wcm9kIiwiYXVkIjoicGhhdmVyLXByb2QiLCJhdXRoX3RpbWUiOjE3MjU3MTEwMzIsInVzZXJfaWQiOiJEUzJtUDhrUElhZkhudUZxRkpOd3VKbkZDd2syIiwic3ViIjoiRFMybVA4a1BJYWZIbnVGcUZKTnd1Sm5GQ3drMiIsImlhdCI6MTcyNzU3NjgyMSwiZXhwIjoxNzI3NTgwNDIxLCJlbWFpbCI6ImRhbmlsZ2FsaWFmZXIyMDAwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImFwcGxlLmNvbSI6WyIwMDAzMjcuMTAzNzU3NWQ3ODU0NDE5YmE2ZmQ5MDE3MTI2ZmFiOTguMTIxMCJdLCJlbWFpbCI6WyJkYW5pbGdhbGlhZmVyMjAwMEBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJhcHBsZS5jb20ifX0.GplSotB_oVbLfxg91_2Zf6m5dFM0CPEKfgn_TGN-5FfMt14IXdY3Y3E2x6TXcH4lf_fSJqK6Qs-yvwMq9Hbjb5qlcwVesMuMXCmJ80Ng2Q_iVQEh-xa9dACDzRGnRUbP6sTHLTWSRZJ94-tqGbBZ7fTmCm0Vov8eD9uVDGTu7QSyBFhmYHmCbZHVgKi2WRKR_vjD8kDa1ynOfLXbwipuMEJaQFlDHjwDsPz_nPDcMkuAP16dM9FDrIDd9nuVPjVl_hyg_f4r083YT7thDwzYjeeCo5M_s0pUf7zoTa460HN9BsQdvcGcls8hwcUiIpggkdiSFxZmWrDwhVRue_loyQ",
+            baggage="sentry-environment=production,sentry-release=dbbc47a5-014e-44e1-a594-5fa296ee2a1a,sentry-public_key=12c9b70d3efa4706a3151d7f03413d72,sentry-trace_id=42952bc158ac42c5b4e899df539bee16",
+            sentry="42952bc158ac42c5b4e899df539bee16-9943618488a09ef2",
+            requestID="de64518a-b373-4b98-81d3-a4576d29e65d"
         ))
 
     def __genHeader(self, headerData: HeaderData) -> dict:
@@ -32,7 +52,23 @@ class PhaverParser:
             'Content-Type': 'application/json'
         }
 
+    def __makeRequest(self, payload: str) -> dict:
+        response = requests.post(self.graphUrls, headers=self.header, data=payload)
+
+        sleep_dur = 4
+        while response.status_code == 429:
+            logging.warning(f"429 Too Many Requests | Sleeping for a {sleep_dur}")
+
+            time.sleep(sleep_dur)
+            response = requests.post(self.graphUrls, headers=self.header, data=payload)
+
+            sleep_dur += 0.5
+
+        return response.json()
+
     def getFollowers(self, profileID: str, limit: int = 20, offset: int = 0) -> list[str]:
+        logging.debug(f"Getting {profileID}`s followers")
+
         payload = (f'{{"query":"query FollowersQuery($followedProfileId: String!, $limit: Int!, $offset: Int!) {{\\n  '
                    f'followers(\\n    limit: $limit\\n    offset: $offset\\n    where: {{followedProfileId: {{_eq: $followedProfileId}}, '
                    f'profile: {{bAt: {{_is_null: true}}}}}}\\n    order_by: {{createdAt: desc}}\\n  ) {{\\n    '
@@ -55,27 +91,22 @@ class PhaverParser:
                    f'isUserFollowing\\n    __typename\\n  }}\\n  createdAt\\n  __typename\\n}}","variables":{{"limit":{limit},"offset":{offset},'
                    f'"followedProfileId":"{profileID}"}}}}')
 
-        response = requests.post(self.graphUrls, headers=self.header, data=payload)
-        sleep_dur = 4
-        while response.status_code == 429:
-            time.sleep(sleep_dur)
-            response = requests.post(self.graphUrls, headers=self.header, data=payload)
-
-            sleep_dur += 0.5
-
-        data = response.json()
+        data = self.__makeRequest(payload=payload)
 
         if data.get("errors") is not None:
-            print("Can`t get JWT token, plz refresh,", data.get("errors")[0].get("message"))
+            logging.error(f"Can`t get JWT token, plz refresh | Err: {data.get("errors")[0].get("message")}")
             return []
 
         followers_ids = []
         for follower in data.get("data").get("followers"):
             followers_ids.append(follower.get("profileId"))
 
+        logging.debug(f"Parsed {len(followers_ids)} {profileID}`s followers")
         return followers_ids
 
     def getProfile(self, profileID: str) -> Profile:
+        logging.debug(f"Getting {profileID} profile")
+
         payload: str = (
             f'{{"query":"query ProfileQuery($profileId: String!) {{\\n  profile: profiles_by_pk(id: $profileId) '
             f'{{\\n    ...ProfileDetailedFieldsFragment\\n    __typename\\n  }}\\n}}\\n\\nfragment ImageFieldsFragment on '
@@ -104,21 +135,15 @@ class PhaverParser:
             f'handle\\n    __typename\\n  }}\\n  coverImage {{\\n    ...ImageFieldsFragment\\n    __typename\\n  }}\\n  '
             f'__typename\\n}}","variables":{{"profileId":"{profileID}"}}}}')
 
-        response = requests.post(self.graphUrls, headers=self.header, data=payload)
-        sleep_dur = 4
-        while response.status_code == 429:
-            time.sleep(sleep_dur)
-            response = requests.post(self.graphUrls, headers=self.header, data=payload)
-
-            sleep_dur += 0.5
-
-        data = response.json()
+        data = self.__makeRequest(payload=payload)
 
         if data.get("errors") is not None:
-            print("Can`t get JWT token, plz refresh,", data.get("errors")[0].get("message"))
+            logging.error(f"Can`t get JWT token, plz refresh | Err: {data.get("errors")[0].get("message")}")
             return Profile()
 
         profile: dict = data.get("data").get("profile")
+
+        logging.debug(f"Got {profileID} profile\n{profile}")
 
         return Profile(
             name=profile.get("name"),
@@ -134,7 +159,9 @@ class PhaverParser:
             discord=profile.get("discord"),
         )
 
-    def getMembers(self, communityId: str, limit: int = 100000, offset: int = 475) -> list[str]:
+    def getMembers(self, communityId: str, limit: int = 100000, offset: int = 0) -> list[str]:
+        logging.debug(f"Getting {communityId}`s members")
+
         payload: str = (
             f'{{"query":"query CommunityMembersQuery($communityId: String!, $limit: Int!, $offset: Int!) {{\\n  '
             f'community_members(\\n    limit: $limit\\n    offset: $offset\\n    order_by: {{createdAt: desc}}\\n '
@@ -162,32 +189,27 @@ class PhaverParser:
             f'createdAt\\n  userRole\\n  communityId\\n  profileId\\n  __typename\\n}}",'
             f'"variables":{{"limit":{limit},"offset":{offset},"communityId":"{communityId}"}}}}')
 
-        response = requests.post(self.graphUrls, headers=self.header, data=payload)
-        sleep_dur = 4
-        while response.status_code == 429:
-            time.sleep(sleep_dur)
-            response = requests.post(self.graphUrls, headers=self.header, data=payload)
-
-            sleep_dur += 0.5
-
-        data = response.json()
+        data = self.__makeRequest(payload=payload)
 
         if data.get("errors") is not None:
-            print("Can`t get JWT token, plz refresh,", data.get("errors")[0].get("message"))
+            logging.error(f"Can`t get JWT token, plz refresh | Err: {data.get("errors")[0].get("message")}")
             return []
 
         ids: list[str] = []
         for member in data.get("data").get("community_members"):
             ids.append(member.get("profile").get("id"))
 
+        logging.debug(f"Got {len(ids)} {communityId}`s members")
         return ids
 
     async def start(self, communityID: str):
+        logging.debug(f"Start parsing...")
+
         members_ids = self.getMembers(communityId=communityID)
         l_m, count = len(members_ids), 1
 
         for member_id in members_ids:
-            print(f"[+] {count}/{l_m}")
+            logging.debug(f"Progress: {count}/{l_m} users parsed")
             count += 1
 
             profile = self.getProfile(profileID=member_id)
@@ -198,15 +220,52 @@ class PhaverParser:
             await fileUtils.addLinesToFileAsync("results/to_parse.txt", followers)
 
             if profile.isEligible():
+                logging.debug(f"Account {member_id} is eligible")
                 await fileUtils.addLineToFileAsync("results/eligible.txt", profileBIO)
             else:
+                logging.debug(f"Account {member_id} is not eligible")
                 await fileUtils.addLineToFileAsync("results/not_eligible.txt", profileBIO)
+
+        logging.debug("Parsing end.")
+
+    async def startLocal(self, pathToIDs: str):
+        logging.debug(f"Start parsing...")
+
+        ids = fileUtils.readFile(filePath=pathToIDs)
+
+        count, l_m = 1, len(ids)
+        for id in ids:
+            if len(id) > 29:
+                await fileUtils.removeLineFromFileAsync("results/to_parse.txt", id)
+                pass
+
+            logging.debug(f"Progress: {count}/{l_m} users parsed")
+            count += 1
+
+            profile = self.getProfile(profileID=id)
+            profileBIO = profile.generateBio()
+
+            followers = self.getFollowers(profileID=id)
+
+            await fileUtils.addLinesToFileAsync("results/to_parse.txt", followers)
+
+            if profile.isEligible():
+                logging.debug(f"Account {id} is eligible")
+                await fileUtils.addLineToFileAsync("results/eligible.txt", profileBIO)
+            else:
+                logging.debug(f"Account {id} is not eligible")
+                await fileUtils.addLineToFileAsync("results/not_eligible.txt", profileBIO)
+
+            await fileUtils.removeLineFromFileAsync("results/to_parse.txt", id)
+
+        logging.debug("Parsing end.")
 
 
 async def main():
     phaverParser = PhaverParser()
 
-    await phaverParser.start("6210cc7a-a4a8-4dfa-bf57-f79d13654c3c")
+    # await phaverParser.start("6210cc7a-a4a8-4dfa-bf57-f79d13654c3c")
+    await phaverParser.startLocal("results/to_parse.txt")
 
 
 if __name__ == "__main__":
