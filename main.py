@@ -31,14 +31,37 @@ class PhaverParser:
     def __init__(self):
         self.graphUrls = "https://gql.next.phaver.com/v1/graphql"
 
-        self.header = self.__genHeader(HeaderData(
-            bearerToken="Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjZjYzNmY2I2NDAzMjc2MGVlYjljMjZmNzdkNDA3YTY5NGM1MmIwZTMiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoi0JTQsNC90LjQuyDQpdC-0LTQvtGBIiwiaHR0cHM6Ly9oYXN1cmEuaW8vand0L2NsYWltcyI6eyJ4LWhhc3VyYS1hbGxvd2VkLXJvbGVzIjpbInVzZXIiXSwieC1oYXN1cmEtZGVmYXVsdC1yb2xlIjoidXNlciIsIngtaGFzdXJhLXVzZXItaWQiOiJEUzJtUDhrUElhZkhudUZxRkpOd3VKbkZDd2syIn0sInR5cGUiOiJ1c2VyIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL3BoYXZlci1wcm9kIiwiYXVkIjoicGhhdmVyLXByb2QiLCJhdXRoX3RpbWUiOjE3MjU3MTEwMzIsInVzZXJfaWQiOiJEUzJtUDhrUElhZkhudUZxRkpOd3VKbkZDd2syIiwic3ViIjoiRFMybVA4a1BJYWZIbnVGcUZKTnd1Sm5GQ3drMiIsImlhdCI6MTcyNzU3NjgyMSwiZXhwIjoxNzI3NTgwNDIxLCJlbWFpbCI6ImRhbmlsZ2FsaWFmZXIyMDAwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImFwcGxlLmNvbSI6WyIwMDAzMjcuMTAzNzU3NWQ3ODU0NDE5YmE2ZmQ5MDE3MTI2ZmFiOTguMTIxMCJdLCJlbWFpbCI6WyJkYW5pbGdhbGlhZmVyMjAwMEBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJhcHBsZS5jb20ifX0.GplSotB_oVbLfxg91_2Zf6m5dFM0CPEKfgn_TGN-5FfMt14IXdY3Y3E2x6TXcH4lf_fSJqK6Qs-yvwMq9Hbjb5qlcwVesMuMXCmJ80Ng2Q_iVQEh-xa9dACDzRGnRUbP6sTHLTWSRZJ94-tqGbBZ7fTmCm0Vov8eD9uVDGTu7QSyBFhmYHmCbZHVgKi2WRKR_vjD8kDa1ynOfLXbwipuMEJaQFlDHjwDsPz_nPDcMkuAP16dM9FDrIDd9nuVPjVl_hyg_f4r083YT7thDwzYjeeCo5M_s0pUf7zoTa460HN9BsQdvcGcls8hwcUiIpggkdiSFxZmWrDwhVRue_loyQ",
-            baggage="sentry-environment=production,sentry-release=dbbc47a5-014e-44e1-a594-5fa296ee2a1a,sentry-public_key=12c9b70d3efa4706a3151d7f03413d72,sentry-trace_id=42952bc158ac42c5b4e899df539bee16",
-            sentry="42952bc158ac42c5b4e899df539bee16-9943618488a09ef2",
-            requestID="de64518a-b373-4b98-81d3-a4576d29e65d"
-        ))
+        content = """baggage: sentry-environment=production,sentry-release=dbbc47a5-014e-44e1-a594-5fa296ee2a1a,sentry-public_key=12c9b70d3efa4706a3151d7f03413d72,sentry-trace_id=344f46ebb1a7461e991defeb8f9a6a10
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjZjYzNmY2I2NDAzMjc2MGVlYjljMjZmNzdkNDA3YTY5NGM1MmIwZTMiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoi0JTQsNC90LjQuyDQpdC-0LTQvtGBIiwiaHR0cHM6Ly9oYXN1cmEuaW8vand0L2NsYWltcyI6eyJ4LWhhc3VyYS1hbGxvd2VkLXJvbGVzIjpbInVzZXIiXSwieC1oYXN1cmEtZGVmYXVsdC1yb2xlIjoidXNlciIsIngtaGFzdXJhLXVzZXItaWQiOiJEUzJtUDhrUElhZkhudUZxRkpOd3VKbkZDd2syIn0sInR5cGUiOiJ1c2VyIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL3BoYXZlci1wcm9kIiwiYXVkIjoicGhhdmVyLXByb2QiLCJhdXRoX3RpbWUiOjE3MjU3MTEwMzIsInVzZXJfaWQiOiJEUzJtUDhrUElhZkhudUZxRkpOd3VKbkZDd2syIiwic3ViIjoiRFMybVA4a1BJYWZIbnVGcUZKTnd1Sm5GQ3drMiIsImlhdCI6MTcyNzYxMDYzMiwiZXhwIjoxNzI3NjE0MjMyLCJlbWFpbCI6ImRhbmlsZ2FsaWFmZXIyMDAwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImFwcGxlLmNvbSI6WyIwMDAzMjcuMTAzNzU3NWQ3ODU0NDE5YmE2ZmQ5MDE3MTI2ZmFiOTguMTIxMCJdLCJlbWFpbCI6WyJkYW5pbGdhbGlhZmVyMjAwMEBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJhcHBsZS5jb20ifX0.JMRkLY91j6HLLSY_aChR2vcOvO62OC4GwYoWXOTDXRX2TPU5sRv23bxVABWjQmQ7FvxoHZ3E-a_cMdVoXf_JVZH6P6RG4UH_k-th8GQftPnRQZBZOncL0x49VIVKiNn1GkvkEnVjGFmOpV-LMKpC1HgGQfHqX2_TXGBIdBBOxHk0-srT-xgk25krlb2fBtxURNjdaoaQ1nyiF1tjAW1lKwEfvhopTxbU3G0-kXcuuU1nNsRFwgrstPe6Eyhb-UkynqnFeatzTGLESlqW1FZ_gt3y-CDEZLjUsku2EUgbczaG_oREu-MyiLW6jM5wBdwjwrbw4Wk9JZ0UhWCKZkWc6g
+Accept-Language: ru
+Accept-Encoding: gzip, deflate, br
+sentry-trace: 344f46ebb1a7461e991defeb8f9a6a10-b2f85fd3a65a1926
+x-request-id: e38d071d-6d72-4563-86e4-8faf20603243"""
 
-    def __genHeader(self, headerData: HeaderData) -> dict:
+        self.header = self.__genHeader(self.__parseHeaderStr(content))
+
+    @staticmethod
+    def __parseHeaderStr(content: str) -> HeaderData:
+        lines = content.strip().splitlines()
+
+        data = []
+        for line in lines:
+            k, v = line.strip().split(": ")
+
+            if k in ["Accept-Language", "Accept-Encoding"]:
+                continue
+
+            data.append(v)
+
+        return HeaderData(
+            bearerToken=data[1],
+            baggage=data[0],
+            sentry=data[2],
+            requestID=data[3]
+        )
+
+    @staticmethod
+    def __genHeader(headerData: HeaderData) -> dict:
         return {
             'Host': 'gql.next.phaver.com',
             'Accept': '*/*',
@@ -237,7 +260,7 @@ class PhaverParser:
         for id in ids:
             if len(id) > 29:
                 await fileUtils.removeLineFromFileAsync("results/to_parse.txt", id)
-                pass
+                continue
 
             logging.debug(f"Progress: {count}/{l_m} users parsed")
             count += 1
@@ -266,6 +289,7 @@ async def main():
 
     # await phaverParser.start("6210cc7a-a4a8-4dfa-bf57-f79d13654c3c")
     await phaverParser.startLocal("results/to_parse.txt")
+
 
 
 if __name__ == "__main__":
